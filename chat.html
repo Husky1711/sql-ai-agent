@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface - SQL AI Agent</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .page-subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            min-height: 600px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            max-height: 500px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: #059669;
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 14px;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+            transition: all 0.2s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .send-button {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-button:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            color: #e2e8f0;
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #334155;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .sql-preview {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            margin-top: 8px;
+            border: 1px solid #334155;
+        }
+
+        .sql-result {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            margin-top: 12px;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+
+        details {
+            margin-top: 12px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            background: #1e293b;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #e2e8f0;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        summary:hover {
+            background: #334155;
+        }
+
+        details[open] summary {
+            margin-bottom: 12px;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 20px;
+        }
+
+        .welcome-message h3 {
+            color: #e2e8f0;
+            margin-bottom: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Chat Interface</h1>
+            <p class="page-subtitle">Ask questions about your database in natural language</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <h3>Welcome to SQL AI Agent</h3>
+                    <p>I can help you query your database using natural language. Please configure your database connection and authenticate to get started.</p>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Ask me anything about your database... (e.g., 'Show me all customers from last month')"
+                    rows="1"
+                ></textarea>
+                <button class="send-button" id="sendButton" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let ws = null;
+        let isConnected = false;
+
+        // WebSocket connection
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//localhost:8000/ws/query`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                isConnected = true;
+                console.log('WebSocket connected');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onclose = function(event) {
+                isConnected = false;
+                console.log('WebSocket disconnected');
+                // Try to reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'status':
+                    updateStatusMessage(data.message, data.step);
+                    break;
+                case 'sql_generated':
+                    showGeneratedSQL(data.sql_query);
+                    break;
+                case 'query_executed':
+                    showQueryResults(data.result, data.execution_time);
+                    break;
+                case 'complete':
+                    showFinalResponse(data);
+                    break;
+                case 'error':
+                    showError(data.error);
+                    break;
+            }
+        }
+
+        function updateStatusMessage(message, step) {
+            // Remove any existing status messages
+            const existingStatus = document.querySelector('.status-message');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+            
+            // Add new status message
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status-message';
+            statusDiv.innerHTML = `
+                <div class="status-content">
+                    <div class="status-spinner"></div>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.appendChild(statusDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showGeneratedSQL(sqlQuery) {
+            const statusDiv = document.querySelector('.status-message');
+            if (statusDiv) {
+                statusDiv.innerHTML = `
+                    <div class="status-content">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                        <span>SQL Generated Successfully</span>
+                    </div>
+                    <div class="sql-preview">${sqlQuery}</div>
+                `;
+            }
+        }
+
+        function showQueryResults(result, executionTime) {
+            const statusDiv = document.querySelector('.status-message');
+            if (statusDiv) {
+                const resultCount = result ? result.length : 0;
+                statusDiv.innerHTML = `
+                    <div class="status-content">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                        <span>Query Executed - ${resultCount} rows returned (${(executionTime * 1000).toFixed(2)}ms)</span>
+                    </div>
+                `;
+            }
+        }
+
+        function showFinalResponse(data) {
+            // Remove status message
+            const statusDiv = document.querySelector('.status-message');
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+            
+            let responseText = '';
+            
+            // Show natural language response prominently
+            if (data.nlp_response) {
+                responseText += `${data.nlp_response}<br><br>`;
+            }
+            
+            // Show technical details in collapsible sections
+            responseText += `<details><summary><strong>🔍 Technical Details</strong></summary>`;
+            responseText += `<strong>Generated SQL:</strong><br><div class="sql-result">${data.sql_query}</div><br>`;
+            
+            if (data.result && data.result.length > 0) {
+                responseText += `<strong>Raw Results (${data.result.length} rows):</strong><br><div class="sql-result">${JSON.stringify(data.result.slice(0, 3), null, 2)}${data.result.length > 3 ? '\n... (showing first 3 rows)' : ''}</div>`;
+            } else {
+                responseText += '<strong>Results:</strong> No data returned';
+            }
+            
+            if (data.execution_time) {
+                responseText += `<br><strong>Execution Time:</strong> ${(data.execution_time * 1000).toFixed(2)}ms`;
+            }
+            
+            responseText += `</details>`;
+
+            addMessage('assistant', responseText);
+        }
+
+        function showError(error) {
+            // Remove status message
+            const statusDiv = document.querySelector('.status-message');
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+            
+            addMessage('assistant', `Error: ${error}`);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            if (!authToken) {
+                addMessage('assistant', 'Please authenticate first before sending queries.');
+                return;
+            }
+
+            if (!isConnected) {
+                addMessage('assistant', 'Please connect to a database first.');
+                return;
+            }
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Send query via WebSocket with auth token
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ 
+                    query: message,
+                    token: authToken  // Include auth token
+                }));
+            } else {
+                addMessage('assistant', 'WebSocket connection not available. Please refresh the page.');
+            }
+        }
+
+        function addMessage(type, content) {
+            const messagesContainer = document.getElementById('chatMessages');
+            
+            // Remove welcome message if it exists
+            const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = type === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Auto-resize textarea
+        document.getElementById('chatInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send message on Enter (but allow Shift+Enter for new line)
+        document.getElementById('chatInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Initialize on page load
+        window.onload = function() {
+            authToken = localStorage.getItem('authToken');
+            connectWebSocket();
+        };
+    </script>
+</body>
+</html>
